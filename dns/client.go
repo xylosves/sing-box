@@ -504,17 +504,19 @@ func MessageToAddresses(response *dns.Msg) []netip.Addr {
 	if response == nil || response.Rcode != dns.RcodeSuccess {
 		return nil
 	}
-	addresses := make([]netip.Addr, 0, len(response.Answer))
-	for _, rawAnswer := range response.Answer {
-		switch answer := rawAnswer.(type) {
-		case *dns.A:
-			addresses = append(addresses, M.AddrFromIP(answer.A))
-		case *dns.AAAA:
-			addresses = append(addresses, M.AddrFromIP(answer.AAAA))
-		case *dns.HTTPS:
-			for _, value := range answer.SVCB.Value {
-				if value.Key() == dns.SVCB_IPV4HINT || value.Key() == dns.SVCB_IPV6HINT {
-					addresses = append(addresses, common.Map(strings.Split(value.String(), ","), M.ParseAddr)...)
+	addresses := make([]netip.Addr, 0, len(response.Answer)+len(response.Extra))
+	for _, section := range [][]dns.RR{response.Answer, response.Extra} {
+		for _, rawRR := range section {
+			switch rr := rawRR.(type) {
+			case *dns.A:
+				addresses = append(addresses, M.AddrFromIP(rr.A))
+			case *dns.AAAA:
+				addresses = append(addresses, M.AddrFromIP(rr.AAAA))
+			case *dns.HTTPS:
+				for _, value := range rr.SVCB.Value {
+					if value.Key() == dns.SVCB_IPV4HINT || value.Key() == dns.SVCB_IPV6HINT {
+						addresses = append(addresses, common.Map(strings.Split(value.String(), ","), M.ParseAddr)...)
+					}
 				}
 			}
 		}
