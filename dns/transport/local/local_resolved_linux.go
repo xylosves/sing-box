@@ -12,7 +12,7 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/service/resolved"
-	"github.com/sagernet/sing-tun"
+	tun "github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/control"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -153,6 +153,18 @@ func (t *DBusResolvedResolver) Exchange(object any, ctx context.Context, message
 			return nil, E.Cause(err, "unpack resource record")
 		}
 		response.Answer = append(response.Answer, rr)
+	}
+	if len(response.Answer) > 0 && response.Answer[0].Header().Name != question.Name {
+		cname := &mDNS.CNAME{
+			Hdr: mDNS.RR_Header{
+				Name:   question.Name,
+				Rrtype: mDNS.TypeCNAME,
+				Class:  mDNS.ClassINET,
+				Ttl:    response.Answer[0].Header().Ttl,
+			},
+			Target: response.Answer[0].Header().Name,
+		}
+		response.Answer = append([]mDNS.RR{cname}, response.Answer...)
 	}
 	return response, nil
 }
