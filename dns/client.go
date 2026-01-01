@@ -228,6 +228,17 @@ func (c *Client) Exchange(ctx context.Context, transport adapter.DNSTransport, m
 			response.Answer = append(response.Answer, validResponse.Answer...)
 		}
 	}*/
+	if len(response.Extra) > 0 {
+		var extraAnswer []dns.RR
+		for _, extra := range response.Extra {
+			if extra.Header().Rrtype == dns.TypeA || extra.Header().Rrtype == dns.TypeAAAA {
+				extraAnswer = append(extraAnswer, extra)
+			}
+		}
+		if len(extraAnswer) > 0 {
+			response.Answer = append(response.Answer, extraAnswer...)
+		}
+	}
 	disableCache = disableCache || (response.Rcode != dns.RcodeSuccess && response.Rcode != dns.RcodeNameError)
 	if responseChecker != nil {
 		var rejected bool
